@@ -7,7 +7,7 @@ import com.github.stuxuhai.hdata.api.JobContext;
 import com.github.stuxuhai.hdata.api.PluginConfig;
 import com.github.stuxuhai.hdata.api.Record;
 import com.github.stuxuhai.hdata.api.Writer;
-import com.inforefiner.europa.data.rpc.DataService;
+import com.merce.woven.data.rpc.DataService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,8 +19,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-//import com.inforefiner.europa.data.rpc.DataService;
 
 /**
  * Created by joey on 2017/7/6.
