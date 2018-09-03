@@ -69,7 +69,7 @@ public class DubboWriter extends Writer {
             try {
                 rpcService.prepare(tenantId, taskId, channelId, writerConfig);
             } catch (Throwable e) {
-                throw new RuntimeException("can't connect europa data server", e);
+                throw new RuntimeException("can't connect woven data server", e);
             }
         }
     }

@@ -5,7 +5,7 @@ import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.github.stuxuhai.hdata.api.Configuration;
 import com.github.stuxuhai.hdata.api.Record;
-import com.inforefiner.europa.data.rpc.DataService;
+import com.merce.woven.data.rpc.DataService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,8 +48,8 @@ public class DataRpcService implements RpcCallable {
         try {
             dataService.prepare(tenantId, taskId, configuration);
         } catch (Exception e) {
-            logger.error("can't connect europa data server", e);
-            throw new RuntimeException("can't connect europa data server");
+            logger.error("can't connect woven data server", e);
+            throw new RuntimeException("can't connect woven data server");
         }
 
         int bufferSize = configuration.getInt("bufferSize", DEFAULT_BUFFER_SIZE);
