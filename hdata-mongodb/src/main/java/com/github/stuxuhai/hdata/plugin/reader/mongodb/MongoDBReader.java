@@ -13,8 +13,9 @@ import com.mongodb.client.model.Filters;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -82,6 +83,28 @@ public class MongoDBReader extends Reader {
         return db.getCollection(collection);
     }
 
+    private SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
+
+    private Object convertCursorValue(String value, String cursorType) {
+        if (cursorType != null) {
+            switch (cursorType) {
+                case "int":
+                    return Integer.valueOf(value);
+                case "float":
+                    return Float.valueOf(value);
+                case "bigint":
+                    return Long.valueOf(value);
+                case "date":
+                    try {
+                        return sdf.parse(value);
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+            }
+        }
+        return value;
+    }
+
     @Override
     public Splitter newSplitter() {
         return new Splitter() {
@@ -97,41 +120,46 @@ public class MongoDBReader extends Reader {
                 String query = readerConfig.getString(MongoDBReaderProperties.QUERY);
                 String username = readerConfig.getString(MongoDBReaderProperties.USERNAME);
                 String password = readerConfig.getString(MongoDBReaderProperties.PASSWORD);
-//                String cursorColumn = readerConfig.getString(MongoDBReaderProperties.CURSOR_COLUMN);
+                String cursorColumn = readerConfig.getString(MongoDBReaderProperties.CURSOR_COLUMN);
+                String cursorType = readerConfig.getString(MongoDBReaderProperties.CURSOR_TYPE);
                 String cursorValue = readerConfig.getString(MongoDBReaderProperties.CURSOR_VALUE);
 
                 int parallelism = readerConfig.getParallelism();
 
                 MongoCollection c = getMongoCollection(address, port, username, password, database, collection);
-                Document max = (Document) c.find().sort(new BasicDBObject("_id", -1)).iterator().next();
-                if (max != null) {
-                    String maxId = max.getObjectId("_id").toHexString();
-                    List<Bson> querys = new ArrayList<>();
-                    if (StringUtils.isNotBlank(query)) {
-                        querys.add(Filters.expr(Document.parse(query)));
+                List<Bson> querys = new ArrayList<>();
+                querys.add(Filters.expr(Document.parse("{ $eq: [1, 1] }")));
+                if (StringUtils.isNotBlank(cursorColumn)) {
+                    Document max = (Document) c.find().sort(new BasicDBObject(cursorColumn, -1)).iterator().next();
+                    if (max != null) {
+                        Object maxValue = max.get(cursorColumn);
+                        jobConfig.setString("CursorValue", maxValue.toString());
+                        querys.add(Filters.lte(cursorColumn, maxValue));
                     }
                     if (StringUtils.isNotBlank(cursorValue)) {
-                        querys.add(Filters.gt("_id", new ObjectId(cursorValue)));
+                        querys.add(Filters.gt(cursorColumn, convertCursorValue(cursorValue, cursorType)));
                     }
-                    querys.add(Filters.lte("_id", new ObjectId(maxId)));
-                    Long count = c.countDocuments(Filters.and(querys));
-                    int batch = MIN_BATCH_SIZE;
-                    int pCount = count.intValue() / parallelism;
-                    if (batch < pCount) {
-                        batch = pCount;
-                    }
-                    for (int i = 0; i < parallelism; i++) {
-                        int skip = i * batch;
-                        if (skip > count) {
-                            break;
-                        }
-                        PluginConfig otherReaderConfig = (PluginConfig) readerConfig.clone();
-                        FindIterable<Document> iterable = c.find(Filters.and(querys)).skip(skip).limit(batch);
-                        otherReaderConfig.put(MongoDBReaderProperties.ITERATOR, iterable);
-                        ret.add(otherReaderConfig);
-                    }
-                    jobConfig.getWriterConfig().setInt("parallelism", ret.size());
                 }
+                if (StringUtils.isNotBlank(query)) {
+                    querys.add(Filters.expr(Document.parse(query)));
+                }
+                Long count = c.countDocuments(Filters.and(querys));
+                int batch = MIN_BATCH_SIZE;
+                int pCount = count.intValue() / parallelism;
+                if (batch < pCount) {
+                    batch = pCount;
+                }
+                for (int i = 0; i < parallelism; i++) {
+                    int skip = i * batch;
+                    if (skip > count) {
+                        break;
+                    }
+                    PluginConfig otherReaderConfig = (PluginConfig) readerConfig.clone();
+                    FindIterable<Document> iterable = c.find(Filters.and(querys)).skip(skip).limit(batch);
+                    otherReaderConfig.put(MongoDBReaderProperties.ITERATOR, iterable);
+                    ret.add(otherReaderConfig);
+                }
+                jobConfig.getWriterConfig().setInt("parallelism", ret.size());
                 return ret;
             }
         };

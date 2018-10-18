@@ -43,6 +43,11 @@
             <version>3.0</version>
         </dependency>
         <!--<dependency>-->
+            <!--<groupId>com.inforefiner.europa</groupId>-->
+            <!--<artifactId>europa-data-rpc</artifactId>-->
+            <!--<version>3.0</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
             <!--<groupId>com.datapps.cheetah</groupId>-->
             <!--<artifactId>cheetah-data-rpc</artifactId>-->
             <!--<version>3.0</version>-->
